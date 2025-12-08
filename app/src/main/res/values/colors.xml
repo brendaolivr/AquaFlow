@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="white">#FFFFFFFF</color>
+
+    <color name="usage_positive">#388E3C</color>
+    <color name="usage_negative">#D32F2F</color>
+
+    <color name="green">#4CAF50</color>
+    <color name="red">#f00000</color>
+    <color name="gray_light">#7F7F7F</color>
+
+    <color name="primary_blue">#2196F3</color>
+    <color name="primary_blue_light">#6FAAEC</color>
+    <color name="gray_dark">#555555</color>
+    <color name="black">#000000</color>
+    <color name="status_good">#4CAF50</color>
+    <color name="status_warning">#FFC107</color>
+    <color name="status_critical">#F44336</color>
+
+</resources>

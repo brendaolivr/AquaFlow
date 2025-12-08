@@ -1,0 +1,21 @@
+<resources>
+    <string name="app_name">AquaFlow</string>
+    <string name="accueil">Accueil</string>
+    <string name="rapports">Rapports</string>
+    <string name="profil">Profil</string>
+    <string name="aquaflow">AquaFlow</string>
+    <string name="txt_tvsubtitle">Surveillance de la consommation d\'eau</string>
+    <string name="txt_title_current_usage">Consommation actuelle</string>
+    <string name="txt_current_usage_value">120 L</string>
+    <string name="txt_current_usage_sub">Aujourd\'hui</string>
+    <string name="txt_alert_title">Alerte</string>
+    <string name="txt_alert_message">Aucune anomalie détectée.</string>
+    <string name="capteurs">Capteurs</string>
+    <string name="menu">Menu</string>
+    <string name="status">Status</string>
+    <string name="sensor">Sensor</string>
+    <string name="sensor_alert">Sensor alert</string>
+    <string name="back">Back</string>
+    <string name="global_alert">Global alert</string>
+    <string name="water_drop">Water Drop</string>
+</resources>
