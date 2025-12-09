@@ -104,20 +104,6 @@ La base de données est pré-remplie avec des données simulées au premier lanc
 - Consommation journalière pour les 30 derniers jours  
   
 ---  
-  
-## 📦 Dépendances principales  
-  
-```toml  
-[versions]  
-kotlin = "2.0.21"  
-room = "2.6.1"  
-ksp = "2.0.21-1.0.28"  
-  
-[libraries]  
-androidx-room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }  
-androidx-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }  
-androidx-room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
-```
 
 ▶️ Lancer le projet
 1. Cloner le dépôt :
