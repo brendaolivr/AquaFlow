@@ -60,29 +60,33 @@ L'interface est inspirée d'une maquette Figma et construite en XML + Fragments,
 - **Gestion asynchrone** : Coroutines Kotlin
 
 ### Structure du projet
-app/src/main/java/com/example/aquaflow/
-├── data/
-│ ├── AppDatabase.kt # Configuration Room
-│ ├── SensorDao.kt # DAO pour les capteurs
-│ ├── HourlyUsageDao.kt # DAO pour la consommation horaire
-│ └── DayUsageDao.kt # DAO pour la consommation journalière
-├── model/
-│ ├── Sensor.kt # Entité capteur
-│ ├── SensorStatus.kt # Enum des statuts
-│ ├── HourlyUsage.kt # Entité consommation horaire
-│ └── DayUsage.kt # Entité consommation journalière
-├── ui/
-│ ├── home/
-│ │ └── HomeFragment.kt
-│ ├── reports/
-│ │ └── ReportsFragment.kt
-│ └── sensors/
-│ ├── SensorsFragment.kt
-│ └── SensorsAdapter.kt
-└── MainActivity.kt
 
-  
----  
+```
+app/src/main/java/com/example/aquaflow/
+│
+├── data/
+│   ├── AppDatabase.kt          # Configuration Room
+│   ├── SensorDao.kt            # DAO pour les capteurs
+│   ├── HourlyUsageDao.kt       # DAO pour la consommation horaire
+│   └── DayUsageDao.kt          # DAO pour la consommation journalière
+│
+├── model/
+│   ├── Sensor.kt               # Entité capteur
+│   ├── SensorStatus.kt         # Enum des statuts
+│   ├── HourlyUsage.kt          # Entité consommation horaire
+│   └── DayUsage.kt             # Entité consommation journalière
+│
+├── ui/
+│   ├── home/
+│   │   └── HomeFragment.kt
+│   ├── reports/
+│   │   └── ReportsFragment.kt
+│   └── sensors/
+│       ├── SensorsFragment.kt
+│       └── SensorsAdapter.kt
+│
+└── MainActivity.kt
+```
   
 ## 💾 Base de données  
   
