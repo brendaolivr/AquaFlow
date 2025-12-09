@@ -13,4 +13,7 @@ interface HourlyUsageDao {
 
     @Query("DELETE FROM hourly_usage")
     suspend fun deleteAll()
+
+    @Query("DELETE FROM hourly_usage WHERE date = :date")
+    suspend fun deleteUsageForDate(date: String)
 }

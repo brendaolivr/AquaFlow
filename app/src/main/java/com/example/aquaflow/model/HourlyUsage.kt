@@ -7,7 +7,7 @@ import androidx.room.PrimaryKey
 data class HourlyUsage(
     @PrimaryKey(autoGenerate = true)
     val id: Int = 0,
-    val hour: Int,        // 0–23
+    val hour: Int,
     val liters: Int,
-    val date: String      // format "2025-12-09"
+    val date: String
 )

@@ -41,12 +41,10 @@ class HomeFragment : Fragment() {
 
         db = AppDatabase.getDatabase(requireContext())
 
-        // Menu
         binding.btnMenu.setOnClickListener {
             (activity as? MainActivity)?.openDrawer()
         }
 
-        // Boutons de navigation
         binding.btnGoToReports.setOnClickListener {
             (activity as? MainActivity)?.navigateToReports()
         }
@@ -54,23 +52,9 @@ class HomeFragment : Fragment() {
             (activity as? MainActivity)?.navigateToSensors()
         }
 
-        // Charger données depuis Room
-        viewLifecycleOwner.lifecycleScope.launch {
-            val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-            val today = dateFormat.format(Date())
-            val calendar = Calendar.getInstance()
-            calendar.add(Calendar.DAY_OF_YEAR, -1)
-            val yesterday = dateFormat.format(calendar.time)
-
-            val todayUsage = db.hourlyUsageDao().getUsageForDate(today)
-            val yesterdayUsage = db.hourlyUsageDao().getUsageForDate(yesterday)
-
-            updateTodaySummary(todayUsage, yesterdayUsage)
-            setupHorizontalChart(todayUsage)
-        }
+        generateRandomData()
     }
 
-    //Résumé "Aujourd'hui"
 
     private fun updateTodaySummary(
         today: List<HourlyUsage>,
@@ -79,10 +63,8 @@ class HomeFragment : Fragment() {
         val todayTotal = today.sumOf { it.liters }
         val yesterdayTotal = yesterday.sumOf { it.liters }
 
-        // Affiche le volume d'aujourd'hui
         binding.tvTodayVolume.text = todayTotal.toString()
 
-        // Calcul du pourcentage vs hier
         val percentText: String
         val status: AlertStatus
 
@@ -103,15 +85,13 @@ class HomeFragment : Fragment() {
             status = when {
                 percent >= 50.0 -> AlertStatus.HIGH
                 percent >= 20.0 -> AlertStatus.MEDIUM
-                percent <= -20.0 -> AlertStatus.LOW
+                percent < 0 -> AlertStatus.LOW
                 else -> AlertStatus.NORMAL
             }
         }
 
-        // Met à jour le sous-titre
         binding.tvTodaySubtitle.text = "Aujourd'hui  $percentText"
 
-        // Met à jour la couleur de l'alerte
         setAlertStatus(status)
     }
 
@@ -124,18 +104,17 @@ class HomeFragment : Fragment() {
         val red = ContextCompat.getColor(ctx, R.color.status_critical)
 
         val color = when (status) {
+            AlertStatus.LOW -> green
             AlertStatus.NORMAL -> green
-            AlertStatus.LOW -> orange
             AlertStatus.MEDIUM -> orange
             AlertStatus.HIGH -> red
         }
 
-        // Teinte l'icône d'alerte et la couleur du texte sous-titre
+
         binding.ivAlert.setColorFilter(color)
         binding.tvTodaySubtitle.setTextColor(color)
     }
 
-    //Graphique "Activité d'aujourd'hui"
 
     private fun setupXAxisVolumeLabels(maxValue: Int) {
         val context = requireContext()
@@ -194,12 +173,29 @@ class HomeFragment : Fragment() {
         val blue = ContextCompat.getColor(context, R.color.primary_blue)
         val gray = ContextCompat.getColor(context, R.color.gray_dark)
 
-        val sorted = data.sortedBy { it.hour }
+        // Grouper par tranches de 4 heures
+        val groups = listOf(
+            "0-3H" to listOf(0, 1, 2, 3),
+            "4-7H" to listOf(4, 5, 6, 7),
+            "8-11H" to listOf(8, 9, 10, 11),
+            "12-15H" to listOf(12, 13, 14, 15),
+            "16-19H" to listOf(16, 17, 18, 19),
+            "20-23H" to listOf(20, 21, 22, 23)
+        )
 
-        val maxValue = sorted.maxOf { it.liters }.coerceAtLeast(1)
+        data class GroupBar(val label: String, val value: Int)
 
-        // Lignes heure
-        sorted.forEach { entry ->
+        val grouped = groups.map { (label, hours) ->
+            val sum = data
+                .filter { it.hour in hours }
+                .sumOf { it.liters }
+            GroupBar(label, sum)
+        }
+
+        val maxValue = grouped.maxOf { it.value }.coerceAtLeast(1)
+
+        // Lignes pour chaque groupe
+        grouped.forEach { entry ->
             val row = LinearLayout(context).apply {
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
@@ -214,10 +210,10 @@ class HomeFragment : Fragment() {
 
             val tvHour = TextView(context).apply {
                 layoutParams = LinearLayout.LayoutParams(
-                    (40 * density).toInt(),
+                    (50 * density).toInt(),
                     LinearLayout.LayoutParams.WRAP_CONTENT
                 )
-                text = "${entry.hour}H"
+                text = entry.label
                 textSize = 12f
                 setTextColor(gray)
             }
@@ -234,7 +230,7 @@ class HomeFragment : Fragment() {
                 gravity = Gravity.CENTER_VERTICAL
             }
 
-            val ratio = entry.liters.toFloat() / maxValue.toFloat()
+            val ratio = entry.value.toFloat() / maxValue.toFloat()
             val maxWidthPx = (220 * density).toInt()
             val barWidthPx = (maxWidthPx * ratio).toInt().coerceAtLeast((4 * density).toInt())
 
@@ -253,8 +249,45 @@ class HomeFragment : Fragment() {
             container.addView(row)
         }
 
-        // Graduations de volume (0L, 5L, 10L, ...)
         setupXAxisVolumeLabels(maxValue)
+    }
+
+    private fun generateRandomData() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+            val today = dateFormat.format(Date())
+            val calendar = Calendar.getInstance()
+            calendar.add(Calendar.DAY_OF_YEAR, -1)
+            val yesterday = dateFormat.format(calendar.time)
+
+            db.hourlyUsageDao().deleteUsageForDate(today)
+            db.hourlyUsageDao().deleteUsageForDate(yesterday)
+
+            val todayData = (0..23).map { hour ->
+                HourlyUsage(
+                    date = today,
+                    hour = hour,
+                    liters = (5..100).random()
+                )
+            }
+
+            val yesterdayData = (0..23).map { hour ->
+                HourlyUsage(
+                    date = yesterday,
+                    hour = hour,
+                    liters = (5..100).random()
+                )
+            }
+
+            db.hourlyUsageDao().insertAll(todayData)
+            db.hourlyUsageDao().insertAll(yesterdayData)
+
+            val todayUsage = db.hourlyUsageDao().getUsageForDate(today)
+            val yesterdayUsage = db.hourlyUsageDao().getUsageForDate(yesterday)
+
+            updateTodaySummary(todayUsage, yesterdayUsage)
+            setupHorizontalChart(todayUsage)
+        }
     }
 
     override fun onDestroyView() {

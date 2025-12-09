@@ -49,38 +49,31 @@ class ReportsFragment : Fragment() {
 
         db = AppDatabase.getDatabase(requireContext())
 
-        // Menu du haut
         binding.btnMenuReports.setOnClickListener {
             (activity as? MainActivity)?.openDrawer()
         }
 
-        // Retour vers Home
         binding.btnBackReports.setOnClickListener {
             (activity as? MainActivity)?.navigateToHome()
         }
 
         highlightTab(TabPeriod.TODAY)
 
-        // Charger les données depuis Room
         viewLifecycleOwner.lifecycleScope.launch {
             val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
             val today = dateFormat.format(Date())
 
             todayHourly = db.hourlyUsageDao().getUsageForDate(today)
 
-            // Pour la semaine et le mois, on prend les 30 derniers jours
             val allDays = db.dayUsageDao().getLast30Days()
-            weekDaily = allDays.take(7)
+            weekDaily = allDays.take(7).reversed()
             monthDaily = allDays
 
-            // Mettre à jour les résumés
             updateSummaries()
 
-            // Dessiner l'histogramme
             drawCurrentTabChart()
         }
 
-        // Onglets
         binding.tabToday.setOnClickListener {
             currentTab = TabPeriod.TODAY
             highlightTab(currentTab)
@@ -99,8 +92,6 @@ class ReportsFragment : Fragment() {
             drawCurrentTabChart()
         }
     }
-
-    //Résumés en haut (volume moyen, alertes, gaspillage, total litres)
 
     private fun updateSummaries() {
         val avgToday =
@@ -133,7 +124,6 @@ class ReportsFragment : Fragment() {
         setTab(binding.tabThisMonth, selected == TabPeriod.THIS_MONTH)
     }
 
-    //Dessin de l'histogramme selon l'onglet
     private fun drawCurrentTabChart() {
         when (currentTab) {
             TabPeriod.TODAY      -> drawTodayChart()
@@ -233,7 +223,6 @@ class ReportsFragment : Fragment() {
         container.addView(row)
     }
 
-    // Histogramme pour "Aujourd'hui"
     private fun drawTodayChart() {
         val ctx = requireContext()
         val container = binding.barChartContainer
@@ -327,7 +316,6 @@ class ReportsFragment : Fragment() {
 
     }
 
-    // Histogramme pour "Dans la semaine"
     private fun drawWeekChart() {
         val ctx = requireContext()
         val container = binding.barChartContainer
@@ -378,7 +366,6 @@ class ReportsFragment : Fragment() {
                 setBackgroundColor(barColor)
             }
 
-            // Extraire le jour du mois depuis la date "2025-12-09" -> "09"
             val dayLabel = day.date.split("-").lastOrNull() ?: day.date
 
             val tv = TextView(ctx).apply {
@@ -401,7 +388,6 @@ class ReportsFragment : Fragment() {
         container.addView(labelsRow)
     }
 
-    // Histogramme pour "Ce mois-ci"
     private fun drawMonthChart() {
         val ctx = requireContext()
         val container = binding.barChartContainer
