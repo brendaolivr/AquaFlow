@@ -8,9 +8,9 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.aquaflow.MainActivity
+import com.example.aquaflow.data.AppDatabase
 import com.example.aquaflow.databinding.FragmentSensorsBinding
 import com.example.aquaflow.model.Sensor
-import com.example.aquaflow.ui.showTopMenu
 import kotlinx.coroutines.launch
 
 class SensorsFragment : Fragment() {
@@ -19,7 +19,7 @@ class SensorsFragment : Fragment() {
     private val binding get() = _binding!!
 
     private lateinit var adapter: SensorsAdapter
-    private val apiService = com.example.aquaflow.data.FakeSensorApiService()
+    private lateinit var db: AppDatabase
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -32,6 +32,8 @@ class SensorsFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        db = AppDatabase.getDatabase(requireContext())
 
         adapter = SensorsAdapter()
         binding.recyclerSensors.layoutManager = LinearLayoutManager(requireContext())
@@ -50,7 +52,7 @@ class SensorsFragment : Fragment() {
 
     private fun loadSensors() {
         viewLifecycleOwner.lifecycleScope.launch {
-            val sensors: List<Sensor> = apiService.getSensors()
+            val sensors: List<Sensor> = db.sensorDao().getAllSensors()
             adapter.submitList(sensors)
         }
     }

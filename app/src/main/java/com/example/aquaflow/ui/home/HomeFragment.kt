@@ -12,12 +12,12 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.example.aquaflow.MainActivity
 import com.example.aquaflow.R
-import com.example.aquaflow.data.FakeUsageRepository
-import com.example.aquaflow.data.UsageRepository
+import com.example.aquaflow.data.AppDatabase
 import com.example.aquaflow.databinding.FragmentHomeBinding
 import com.example.aquaflow.model.HourlyUsage
-import com.example.aquaflow.ui.showTopMenu
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.*
 import kotlin.math.roundToInt
 
 class HomeFragment : Fragment() {
@@ -25,7 +25,7 @@ class HomeFragment : Fragment() {
     private var _binding: FragmentHomeBinding? = null
     private val binding get() = _binding!!
 
-    private val usageRepository: UsageRepository = FakeUsageRepository()
+    private lateinit var db: AppDatabase
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -38,6 +38,8 @@ class HomeFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        db = AppDatabase.getDatabase(requireContext())
 
         // Menu
         binding.btnMenu.setOnClickListener {
@@ -52,13 +54,19 @@ class HomeFragment : Fragment() {
             (activity as? MainActivity)?.navigateToSensors()
         }
 
-        // Charger données simulées
+        // Charger données depuis Room
         viewLifecycleOwner.lifecycleScope.launch {
-            val today = usageRepository.getTodayUsage()
-            val yesterday = usageRepository.getYesterdayUsage()
+            val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+            val today = dateFormat.format(Date())
+            val calendar = Calendar.getInstance()
+            calendar.add(Calendar.DAY_OF_YEAR, -1)
+            val yesterday = dateFormat.format(calendar.time)
 
-            updateTodaySummary(today, yesterday)
-            setupHorizontalChart(today)
+            val todayUsage = db.hourlyUsageDao().getUsageForDate(today)
+            val yesterdayUsage = db.hourlyUsageDao().getUsageForDate(yesterday)
+
+            updateTodaySummary(todayUsage, yesterdayUsage)
+            setupHorizontalChart(todayUsage)
         }
     }
 
@@ -68,8 +76,8 @@ class HomeFragment : Fragment() {
         today: List<HourlyUsage>,
         yesterday: List<HourlyUsage>
     ) {
-        val todayTotal = today.sumOf { it.volumeLiters }
-        val yesterdayTotal = yesterday.sumOf { it.volumeLiters }
+        val todayTotal = today.sumOf { it.liters }
+        val yesterdayTotal = yesterday.sumOf { it.liters }
 
         // Affiche le volume d'aujourd'hui
         binding.tvTodayVolume.text = todayTotal.toString()
@@ -174,6 +182,7 @@ class HomeFragment : Fragment() {
             container.addView(tv)
         }
     }
+
     private fun setupHorizontalChart(data: List<HourlyUsage>) {
         val context = requireContext()
         val container = binding.layoutChartBars
@@ -185,9 +194,9 @@ class HomeFragment : Fragment() {
         val blue = ContextCompat.getColor(context, R.color.primary_blue)
         val gray = ContextCompat.getColor(context, R.color.gray_dark)
 
-        val sorted = data.sortedBy { parseHour(it.hourLabel) }
+        val sorted = data.sortedBy { it.hour }
 
-        val maxValue = sorted.maxOf { it.volumeLiters }.coerceAtLeast(1)
+        val maxValue = sorted.maxOf { it.liters }.coerceAtLeast(1)
 
         // Lignes heure
         sorted.forEach { entry ->
@@ -208,7 +217,7 @@ class HomeFragment : Fragment() {
                     (40 * density).toInt(),
                     LinearLayout.LayoutParams.WRAP_CONTENT
                 )
-                text = entry.hourLabel
+                text = "${entry.hour}H"
                 textSize = 12f
                 setTextColor(gray)
             }
@@ -225,7 +234,7 @@ class HomeFragment : Fragment() {
                 gravity = Gravity.CENTER_VERTICAL
             }
 
-            val ratio = entry.volumeLiters.toFloat() / maxValue.toFloat()
+            val ratio = entry.liters.toFloat() / maxValue.toFloat()
             val maxWidthPx = (220 * density).toInt()
             val barWidthPx = (maxWidthPx * ratio).toInt().coerceAtLeast((4 * density).toInt())
 
@@ -246,10 +255,6 @@ class HomeFragment : Fragment() {
 
         // Graduations de volume (0L, 5L, 10L, ...)
         setupXAxisVolumeLabels(maxValue)
-    }
-
-    private fun parseHour(label: String): Int {
-        return label.trimEnd('H', 'h').toIntOrNull() ?: 0
     }
 
     override fun onDestroyView() {

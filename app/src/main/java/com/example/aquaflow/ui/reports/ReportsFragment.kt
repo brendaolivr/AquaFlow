@@ -12,13 +12,13 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.example.aquaflow.MainActivity
 import com.example.aquaflow.R
-import com.example.aquaflow.data.FakeUsageRepository
-import com.example.aquaflow.data.UsageRepository
+import com.example.aquaflow.data.AppDatabase
 import com.example.aquaflow.databinding.FragmentsReportsBinding
 import com.example.aquaflow.model.DayUsage
 import com.example.aquaflow.model.HourlyUsage
-import com.example.aquaflow.ui.showTopMenu
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.*
 import kotlin.math.roundToInt
 
 class ReportsFragment : Fragment() {
@@ -26,7 +26,7 @@ class ReportsFragment : Fragment() {
     private var _binding: FragmentsReportsBinding? = null
     private val binding get() = _binding!!
 
-    private val usageRepository: UsageRepository = FakeUsageRepository()
+    private lateinit var db: AppDatabase
 
     private enum class TabPeriod { TODAY, THIS_WEEK, THIS_MONTH }
     private var currentTab: TabPeriod = TabPeriod.TODAY
@@ -47,6 +47,8 @@ class ReportsFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        db = AppDatabase.getDatabase(requireContext())
+
         // Menu du haut
         binding.btnMenuReports.setOnClickListener {
             (activity as? MainActivity)?.openDrawer()
@@ -59,11 +61,17 @@ class ReportsFragment : Fragment() {
 
         highlightTab(TabPeriod.TODAY)
 
-        // Charger les données simulées
+        // Charger les données depuis Room
         viewLifecycleOwner.lifecycleScope.launch {
-            todayHourly = usageRepository.getTodayUsage()
-            weekDaily = usageRepository.getWeekDailyUsage()
-            monthDaily = usageRepository.getMonthDailyUsage()
+            val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+            val today = dateFormat.format(Date())
+
+            todayHourly = db.hourlyUsageDao().getUsageForDate(today)
+
+            // Pour la semaine et le mois, on prend les 30 derniers jours
+            val allDays = db.dayUsageDao().getLast30Days()
+            weekDaily = allDays.take(7)
+            monthDaily = allDays
 
             // Mettre à jour les résumés
             updateSummaries()
@@ -96,13 +104,13 @@ class ReportsFragment : Fragment() {
 
     private fun updateSummaries() {
         val avgToday =
-            if (todayHourly.isNotEmpty()) todayHourly.map { it.volumeLiters }.average().roundToInt()
+            if (todayHourly.isNotEmpty()) todayHourly.map { it.liters }.average().roundToInt()
             else 0
 
-        val totalToday = todayHourly.sumOf { it.volumeLiters }
+        val totalToday = todayHourly.sumOf { it.liters }
 
         val avgWeek =
-            if (weekDaily.isNotEmpty()) weekDaily.map { it.volumeLiters }.average().roundToInt()
+            if (weekDaily.isNotEmpty()) weekDaily.map { it.totalLiters }.average().roundToInt()
             else 0
 
         binding.tvAvgVolumeValue.text = avgToday.toString()
@@ -157,8 +165,8 @@ class ReportsFragment : Fragment() {
 
         val points = groups.map { (label, hours) ->
             val sum = todayHourly
-                .filter { parseHour(it.hourLabel) in hours }
-                .sumOf { it.volumeLiters }
+                .filter { it.hour in hours }
+                .sumOf { it.liters }
             Point(label, sum)
         }
 
@@ -246,8 +254,8 @@ class ReportsFragment : Fragment() {
 
         val grouped = groups.map { (label, hours) ->
             val sum = todayHourly
-                .filter { entry -> parseHour(entry.hourLabel) in hours }
-                .sumOf { it.volumeLiters }
+                .filter { entry -> entry.hour in hours }
+                .sumOf { it.liters }
             GroupBar(label, sum)
         }.filter { it.value > 0 || true }
 
@@ -331,7 +339,7 @@ class ReportsFragment : Fragment() {
         val barColor = ContextCompat.getColor(ctx, R.color.primary_blue)
         val textColor = ContextCompat.getColor(ctx, R.color.gray_dark)
 
-        val maxValue = weekDaily.maxOf { it.volumeLiters }.coerceAtLeast(1)
+        val maxValue = weekDaily.maxOf { it.totalLiters }.coerceAtLeast(1)
 
         val barsRow = LinearLayout(ctx).apply {
             layoutParams = LinearLayout.LayoutParams(
@@ -352,7 +360,7 @@ class ReportsFragment : Fragment() {
         }
 
         weekDaily.forEach { day ->
-            val ratio = day.volumeLiters.toFloat() / maxValue.toFloat()
+            val ratio = day.totalLiters.toFloat() / maxValue.toFloat()
             val minHeightDp = 20f
             val maxHeightDp = 120f
             val hDp = minHeightDp + (maxHeightDp - minHeightDp) * ratio
@@ -370,6 +378,9 @@ class ReportsFragment : Fragment() {
                 setBackgroundColor(barColor)
             }
 
+            // Extraire le jour du mois depuis la date "2025-12-09" -> "09"
+            val dayLabel = day.date.split("-").lastOrNull() ?: day.date
+
             val tv = TextView(ctx).apply {
                 layoutParams = LinearLayout.LayoutParams(
                     0,
@@ -377,7 +388,7 @@ class ReportsFragment : Fragment() {
                     1f
                 )
                 gravity = Gravity.CENTER
-                text = day.dayLabel
+                text = dayLabel
                 setTextColor(textColor)
                 textSize = 11f
             }
@@ -403,7 +414,7 @@ class ReportsFragment : Fragment() {
         data class GroupBar(val label: String, val value: Int)
 
         val grouped = groups.mapIndexed { index, list ->
-            val sum = list.sumOf { it.volumeLiters }
+            val sum = list.sumOf { it.totalLiters }
             GroupBar("S${index + 1}", sum)
         }
 
@@ -467,10 +478,6 @@ class ReportsFragment : Fragment() {
 
         container.addView(barsRow)
         container.addView(labelsRow)
-    }
-    private fun parseHour(label: String): Int {
-        // Ex: "0H", "12H" -> 0,12
-        return label.trimEnd('H', 'h').toIntOrNull() ?: 0
     }
 
     override fun onDestroyView() {

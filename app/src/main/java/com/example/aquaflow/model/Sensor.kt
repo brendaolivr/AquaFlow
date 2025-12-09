@@ -1,6 +1,12 @@
 package com.example.aquaflow.model
 
+import androidx.room.Entity
+import androidx.room.Ignore
+import androidx.room.PrimaryKey
+
+@Entity(tableName = "sensors")
 data class Sensor(
+    @PrimaryKey
     val id: String,
     val name: String,
     val location: String,
@@ -8,6 +14,7 @@ data class Sensor(
     val status: SensorStatus,
     val lastUpdate: String
 ) {
+    @get:Ignore
     val statusText: String
         get() = when (status) {
             SensorStatus.OK -> "Actif"
